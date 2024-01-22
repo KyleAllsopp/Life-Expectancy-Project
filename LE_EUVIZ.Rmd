@@ -1,0 +1,692 @@
+---
+title: "Bus 211 ggplot 1"
+author: "Kyle Allsopp"
+date: "2023-11-14"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+#enter library
+library(ggplot2)
+library(dplyr)
+```
+
+```{r, include=FALSE}
+
+#enter data
+data <- read.csv("/Users/kyle/Desktop/Brandeis/Bus 211/BUS 211_Output.csv")
+head(data)
+
+```
+
+START OF VIZ
+
+
+*** This section is important, run this to get the new europe_data which has the additional information we need for visualizations *** 
+
+Subset of data
+```{r}
+#subset Europe data
+europe_data <- data %>%
+  filter(Region == "Europe & Central Asia")
+head(europe_data)
+```
+
+Renaming Variables 
+```{r}
+europe_data <- europe_data %>%
+  rename(le = Life.Expectancy, po_und = Prevalence.of.Undernourishment, co2 = CO2.Emissions, hexp = Health.Expenditure.., edu = Education.Expenditure.., comm_dis = Communicable.Diseases, non_comm_dis = Non.Communicable.Diseases, gdp_bill = GDP..Billions., acc_wtr = Access.to.clean.water)
+
+```
+
+Averaging Variables
+```{r}
+europe_data <- europe_data %>%
+  group_by(Country) %>%
+  mutate(
+    avg_le = mean(le, na.rm = TRUE),
+    avg_po_und = mean(po_und, na.rm = TRUE),
+    avg_co2 = mean(co2, na.rm = TRUE),
+    avg_hexp = mean(hexp, na.rm = TRUE),
+    avg_edu = mean(edu, na.rm = TRUE),
+    avg_comm_dis = mean(comm_dis, na.rm = TRUE),
+    avg_non_comm_dis = mean(non_comm_dis, na.rm = TRUE),
+    avg_gdp_bill = mean(gdp_bill, na.rm = TRUE),
+    avg_acc_wtr = mean(acc_wtr, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+head(europe_data)
+
+```
+
+More Data Cleaning / Creating East v West Variable 
+```{r}
+#creating a variable to define European region based on EuroVoc
+europe_data <- europe_data %>%
+  mutate(europe_region = case_when(
+    Country %in% c("Albania", "Armenia", "Azerbaijan", "Belarus", "Bosnia and Herzegovina", "Bulgaria", "Czech Republic", "Croatia", "Georgia", "Hungary", "Moldova", "Montenegro", "North Macedonia", "Poland", "Romania", "Russia", "Serbia", "Slovakia", "Slovenia", "Ukraine") ~ "Central and Eastern Europe",
+    Country %in% c("Denmark", "Estonia", "Finland", "Iceland", "Latvia", "Lithuania", "Norway", "Sweden") ~ "Northern Europe",
+    Country %in% c("Cyprus", "Greece", "Holy See", "Italy", "Malta", "Portugal", "San Marino", "Spain", "Turkey") ~ "Southern Europe",
+    Country %in% c("Andorra", "Austria", "Belgium", "France", "Germany", "Ireland", "Liechtenstein", "Luxembourg", "Monaco", "Netherlands", "Switzerland", "United Kingdom") ~ "Western Europe",
+    TRUE ~ "Other"
+  ))
+
+#print the first few rows of the updated data
+head(europe_data)
+
+#compute which countries are in the other category, these countries are not in Europe
+other_countries_list <- europe_data %>%
+  filter(europe_region == "Other") %>%
+  select(Country) %>%
+  distinct()
+
+print(other_countries_list)
+
+#remove the countries we found that are not in Europe
+countries_to_remove <- c("Kazakhstan", "Tajikistan", "Turkmenistan", "Uzbekistan")
+
+europe_data <- europe_data %>%
+  filter(!Country %in% countries_to_remove)
+
+#print the updated data
+head(europe_data)
+
+
+#next we create a dummy variable for EU Member states, 1 for yes 0 for no
+#list of EU member countries
+eu_member_countries <- c(
+  "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czech Republic",
+  "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary",
+  "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta",
+  "Netherlands", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden"
+)
+
+#create a new variable 'EU_member'
+europe_data <- europe_data %>%
+  mutate(EU_member = as.numeric(Country %in% eu_member_countries))
+
+#print the updated data
+head(europe_data)
+```
+
+
+
+## Beginning of Visuals 
+
+
+# Libraries for Map of Europe
+```{r}
+#install.packages("ggplot2")
+#install.packages("sf")
+#install.packages("rnaturalearth")
+#install.packages("rnaturalearthdata")
+```
+
+
+# Average Life Expectancy Europe Map 
+```{r}
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Load geographical data for European countries
+european_countries <- ne_countries(scale = "medium", continent = "europe", returnclass = "sf")
+
+# Merge your data with geographical data (ensure the country names match)
+merged_data <- merge(european_countries, europe_data, by.x = "name", by.y = "Country")
+
+# Create the map
+ggplot(data = merged_data) +
+  geom_sf(aes(fill = avg_le), color = "black", size = 0.5) + # Adjust the size for better border visibility
+  scale_fill_gradientn(colors = c("red", "yellow", "green"), na.value = "grey50") + # Color palette from red to green, grey for missing data
+  labs(title = "Average Life Expectancy in Europe",
+       subtitle = "Life expectancy by country, colored from lower (red) to higher (green)",
+       caption = "Source: Your Data Source",
+       fill = "Life Expectancy") +
+  theme_minimal() +
+  theme(legend.position = "right") + # Adjust legend position if needed
+  coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70)) # Adjust map limits if needed
+
+# Print the map
+#print(ggplot_map)
+
+```
+
+# Map of EU Member States in Europe 
+```{r}
+
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Load geographical data for European countries
+european_countries <- ne_countries(scale = "medium", continent = "europe", returnclass = "sf")
+
+# Merge your data with geographical data (ensure the country names match)
+merged_data <- merge(european_countries, europe_data, by.x = "name", by.y = "Country")
+
+# Create the map with EU member states highlighted
+eu_map <- ggplot(data = merged_data) +
+  geom_sf(aes(fill = as.factor(EU_member)), color = "black", size = 0.5) +
+  scale_fill_manual(values = c("0" = "grey", "1" = "blue"), 
+                    labels = c("Non-EU Member", "EU Member"),
+                    name = "Membership") +
+  labs(title = "EU Member States in Europe",
+       subtitle = "EU Member States are highlighted in blue") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70))
+
+# Print the map
+print(eu_map)
+
+
+```
+
+# Multivariate Regression 
+```{r}
+
+# Load necessary libraries
+library(dplyr)
+library(car)
+
+# Assuming your data frame is named europe_data and it's already been cleaned and prepared
+# We will run a linear model (multivariate regression) with life expectancy (le) as the dependent variable
+
+# Multivariate Linear Regression
+lifeExp_model <- lm(le ~ gdp_bill + hexp + edu + co2 + po_und + comm_dis + non_comm_dis + acc_wtr, data = europe_data)
+
+# Summary of the model to view coefficients and statistics
+summary(lifeExp_model)
+
+# Checking for multicollinearity with Variance Inflation Factor (VIF)
+vif(lifeExp_model)  # Values > 5 or 10 indicate high multicollinearity
+
+# Residual checks for assumptions of linear regression
+par(mfrow=c(2,2))
+plot(lifeExp_model)
+
+
+```
+Top variables are Gdp, po_und, comm_dis, acc_wtr, hexp 
+
+# Comparative Analysis by Region 
+```{r}
+
+ggplot(europe_data, aes(x = europe_region, y = avg_le)) +
+  geom_boxplot() +
+  labs(title = "Life Expectancy Across European Regions", x = "Region", y = "Average Life Expectancy")
+
+```
+
+# Adding Europe data 2 for population and diseases 
+```{r}
+
+#input new data from Tableau prep that included population
+europe_data2 <- read.csv("/Users/kyle/Desktop/Brandeis/Bus 211/europe_data2.csv")
+
+
+#replace the existing europe_data with the new data
+europe_data <- europe_data2
+
+
+europe_data <- europe_data %>%
+  group_by(Country) %>%
+  mutate(avg_population = mean(population, na.rm = TRUE))
+
+#communicable
+europe_data <- europe_data %>%
+  mutate(avg_cd_per_capita = avg_comm_dis / avg_population)
+
+
+#noncommunicable
+europe_data <- europe_data %>%
+  mutate(avg_ncd_per_capita = avg_non_comm_dis / avg_population)
+
+```
+
+# Maps of Average of Predictor Variables 
+```{r}
+
+# Load required libraries
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Load geographical data for European countries
+european_countries <- ne_countries(scale = "medium", continent = "europe", returnclass = "sf")
+
+# Merge your data with geographical data (ensure the country names match)
+merged_data <- merge(european_countries, europe_data, by.x = "name", by.y = "Country")
+
+# Function to create a map based on a given variable
+create_map <- function(variable, title, low_color, high_color) {
+  ggplot(data = merged_data) +
+    geom_sf(aes(fill = get(variable)), color = "black", size = 0.5) + 
+    scale_fill_gradientn(colors = c(low_color, high_color), na.value = "grey50") + 
+    labs(title = title,
+         fill = variable) +
+    theme_minimal() +
+    theme(legend.position = "right") + 
+    coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70))
+}
+
+# Map for Access to Clean Water
+create_map("avg_acc_wtr", "Average Access to Clean Water in Europe", "blue", "green")
+
+# Map for Prevalence of Undernourishment
+create_map("avg_po_und", "Average Prevalence of Undernourishment in Europe", "orange", "red")
+
+# Map for Communicable Diseases
+create_map("avg_comm_dis", "Average Communicable Diseases in Europe", "purple", "pink")
+
+# Execute these functions to create the maps
+map_acc_wtr <- create_map("avg_acc_wtr", "Average Access to Clean Water in Europe", "blue", "green")
+map_po_und <- create_map("avg_po_und", "Average Prevalence of Undernourishment in Europe", "orange", "red")
+map_comm_dis <- create_map("avg_comm_dis", "Average Communicable Diseases in Europe", "purple", "pink")
+
+# Map for Education Expenditure
+map_edu <- create_map("avg_edu", "Average Education Expenditure in Europe", "#fee5d9", "#a50f15")
+
+# Map for Health Expenditure
+map_hexp <- create_map("avg_hexp", "Average Health Expenditure in Europe", "#f7f7f7", "#652526")
+
+# Map for GDP in Billions
+map_gdp <- create_map("avg_gdp_bill", "Average GDP in Billions in Europe", "#ffffcc", "#1a9641")
+
+# Print the maps
+print(map_acc_wtr)
+print(map_po_und)
+print(map_comm_dis)
+print(map_edu)
+print(map_hexp)
+print(map_gdp)
+
+
+```
+
+# Map of Communicable Diseases Per Capita for Europe 
+```{r}
+# Assuming 'merged_data' is already created and contains the necessary variables
+
+# Function to create a map based on a given variable
+create_map <- function(variable, title, low_color, high_color) {
+  ggplot(data = merged_data) +
+    geom_sf(aes(fill = get(variable)), color = "black", size = 0.5) + 
+    scale_fill_gradientn(colors = c(low_color, high_color), na.value = "grey50") + 
+    labs(title = title,
+         fill = variable) +
+    theme_minimal() +
+    theme(legend.position = "right") + 
+    coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70))
+}
+
+# Let's choose a teal color gradient for communicable diseases per capita
+map_cd_per_capita <- create_map("avg_cd_per_capita", "Communicable Diseases per Capita in Europe", "#a2d4ec", "#004c6d")
+
+# Print the communicable diseases per capita map
+print(map_cd_per_capita)
+
+
+```
+
+# Map of EU and non EU Members 
+```{r eu-members-map}
+
+# Assuming merged_data already contains the 'EU_member' column with 1 for EU members and 0 for non-members
+
+# Create the map highlighting EU member states with blue and non-members with grey
+ggplot(data = merged_data) +
+  geom_sf(aes(fill = as.factor(EU_member)), color = "black", size = 0.5) +
+  scale_fill_manual(values = c("0" = "grey", "1" = "blue"), name = "EU Membership",
+                    labels = c("Non-EU Member", "EU Member")) +
+  labs(title = "EU and Non-EU Countries in Europe",
+       subtitle = "EU member states in blue, non-members in grey") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70))
+
+# Print the map
+#ggplot_map
+
+```
+
+# Map of Average Life Expectancy for EU Countries 
+```{r}
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Assuming europe_data already contains the 'EU_member' column with 1 for EU members and 0 for non-members
+
+# Load geographical data for European countries
+european_countries <- ne_countries(scale = "medium", continent = "europe", returnclass = "sf")
+
+# Merge your data with geographical data (ensure the country names match)
+merged_data <- merge(european_countries, europe_data, by.x = "name", by.y = "Country")
+
+# Create the map showing only EU countries with life expectancy
+ggplot(data = merged_data) +
+  geom_sf(aes(fill = ifelse(EU_member == 1, avg_le, NA)), color = "black", size = 0.5) +
+  scale_fill_gradientn(colors = c("red", "yellow", "green"), na.value = "grey50", 
+                       limits = c(min(merged_data$avg_le, na.rm = TRUE), max(merged_data$avg_le, na.rm = TRUE)),
+                       name = "Life Expectancy") +
+  labs(title = "Average Life Expectancy in EU Countries",
+       subtitle = "EU countries colored by life expectancy, non-EU countries in grey") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70))
+
+# Print the map
+#ggplot_map
+
+```
+
+# Map of EU Member States in Europe 
+```{r}
+
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Load geographical data for European countries
+european_countries <- ne_countries(scale = "medium", continent = "europe", returnclass = "sf")
+
+# Merge your data with geographical data (ensure the country names match)
+merged_data <- merge(european_countries, europe_data, by.x = "name", by.y = "Country")
+
+# Create the map highlighting EU member states
+ggplot(data = merged_data) +
+  geom_sf(aes(fill = ifelse(EU_member == 1, "EU Member", "Non-EU Member")), color = "black", size = 0.5) +
+  scale_fill_manual(values = c("Non-EU Member" = "grey", "EU Member" = "blue"),
+                    name = "Membership") +
+  labs(title = "EU Member States in Europe",
+       subtitle = "Countries with EU membership are highlighted") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70))
+
+# Print the map
+print(eu_map)
+
+
+```
+
+# Map of four European Regions 
+```{r}
+
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Load geographical data for European countries
+european_countries <- ne_countries(scale = "medium", continent = "europe", returnclass = "sf")
+
+# Merge your data with geographical data (ensure the country names match)
+merged_data <- merge(european_countries, europe_data, by.x = "name", by.y = "Country")
+
+# Create the map highlighting the four European regions
+eu_region_map <- ggplot(data = merged_data) +
+  geom_sf(aes(fill = europe_region), color = "black", size = 0.5) +
+  scale_fill_manual(values = c("Central and Eastern Europe" = "#1b9e77",
+                               "Northern Europe" = "#d95f02",
+                               "Southern Europe" = "#7570b3",
+                               "Western Europe" = "#e7298a"),
+                    name = "Region") +
+  labs(title = "European Regions",
+       subtitle = "Each color represents a different region") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  coord_sf(crs = st_crs(4326), xlim = c(-10, 40), ylim = c(35, 70))
+
+# Print the map
+print(eu_region_map)
+
+```
+
+# LE and Education Exp in Europe, LE and Access to Clean Water in Europe, LE and Prev of Und in Europe 
+```{r}
+
+# Plotting Life Expectancy with Access to Clean Water based on Regions
+ggplot(europe_data, aes(x = avg_acc_wtr, y = avg_le, group = europe_region, color = europe_region)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Life Expectancy with Access to Clean Water in Europe",
+       x = "Average Access to Clean Water",
+       y = "Average Life Expectancy") +
+  theme_minimal() +
+  scale_color_manual(values = c("Central and Eastern Europe" = "red",
+                                "Northern Europe" = "blue",
+                                "Southern Europe" = "green",
+                                "Western Europe" = "purple",
+                                "Other" = "gray")) 
+
+# Plotting Life Expectancy against Education Expenditure with Country Labels
+ggplot(europe_data, aes(x = avg_edu, y = avg_le)) +
+  geom_point(aes(color = europe_region), size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  geom_text(aes(label = Country), nudge_x = 0.2, nudge_y = 0.2, size = 2.5, check_overlap = TRUE) +
+  labs(title = "Life Expectancy and Education Expenditure in Europe",
+       x = "Average Education Expenditure",
+       y = "Average Life Expectancy") +
+  theme_minimal() +
+  scale_color_manual(values = c("Central and Eastern Europe" = "red",
+                                "Northern Europe" = "blue",
+                                "Southern Europe" = "green",
+                                "Western Europe" = "purple",
+                                "Other" = "gray"))
+
+
+# Jitter Plot for Average Life Expectancy and Average Prevalence of Undernourishment
+ggplot(europe_data, aes(x = avg_po_und, y = avg_le)) +
+  geom_jitter(aes(color = europe_region), width = 0.2, height = 0.2, alpha = 0.7) +
+  geom_text(aes(label = Country), nudge_x = 0.1, nudge_y = 0.1, size = 2.5, check_overlap = TRUE) +
+  labs(title = "Life Expectancy and Prevalence of Undernourishment in Europe",
+       x = "Average Prevalence of Undernourishment (log scale)",
+       y = "Average Life Expectancy") +
+  theme_minimal() +
+  scale_color_manual(values = c("Central and Eastern Europe" = "red",
+                                "Northern Europe" = "blue",
+                                "Southern Europe" = "green",
+                                "Western Europe" = "purple",
+                                "Other" = "gray")) +
+  scale_x_log10()  # Apply log scale to the x-axis
+
+
+
+```
+
+Diverging Plot
+```{r}
+ggplot(europe_data, aes(x = reorder(Country, avg_le), y = avg_le, label = avg_le)) +
+  geom_bar(stat = 'identity', aes(fill = ifelse(avg_le > median(europe_data$avg_le, na.rm = TRUE), "above", "below")), width = 0.5) +
+  scale_fill_manual(name = "Average Life Expectancy", 
+                    labels = c("Above Median", "Below Median"), 
+                    values = c("above" = "#00ba38", "below" = "#f8766d")) +
+  labs(subtitle = "Average Variables in Europe & Central Asia", 
+       title = "Diverging Bars") +
+  coord_flip()
+```
+```{r}
+overall_median_le <- median(europe_data$Life.Expectancy, na.rm = TRUE)
+
+europe_data <- europe_data %>%
+  group_by(Country) %>%
+  summarize(avg_le = mean(le, na.rm = TRUE))
+
+# Bar plot for average life expectancy by country
+
+```
+
+
+
+```{r}
+#write europe data to a csv
+write.csv(europe_data, "europe_data.csv", row.names = FALSE)
+
+#input new data from Tableau prep that included population
+europe_data2 <- read.csv("/Users/kyle/Desktop/Brandeis/Bus 211/europe_data2.csv")
+
+#replace the existing europe_data with the new data
+europe_data <- europe_data2
+
+#create average population
+europe_data <- europe_data %>%
+  group_by(Country) %>%
+  mutate(avg_population = mean(population, na.rm = TRUE))
+
+#create avg communicable diseases per capita
+europe_data <- europe_data %>%
+  mutate(avg_cd_per_capita = avg_comm_dis / avg_population)
+
+#create avg non communicable diseases per capita
+europe_data <- europe_data %>%
+  mutate(avg_ncd_per_capita = avg_non_comm_dis / avg_population)
+
+
+```
+
+
+
+```{r}
+# Calculate the weighted average access to clean water
+europe_data <- europe_data %>%
+  mutate(weighted_avg_acc_wtr = sum(avg_acc_wtr * avg_population, na.rm = TRUE) / sum(avg_population, na.rm = TRUE))
+
+# Bar plot for weighted average access to clean water by region
+ggplot(europe_data, aes(x = reorder(europe_region, -weighted_avg_acc_wtr), y = weighted_avg_acc_wtr)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Weighted Average Access to Clean Water Across European Regions",
+       x = "European Region",
+       y = "Weighted Average Access to Clean Water") +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(europe_data, aes(x = europe_region, y = avg_population, fill = europe_region)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Population Across European Regions",
+       x = "European Region",
+       y = "Average Population") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(europe_data, aes(x = reorder(Country, avg_population), y = avg_population, fill = europe_region)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Population Across European Countries",
+       x = "Country",
+       y = "Average Population") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+ggplot(europe_data, aes(x = reorder(Country, avg_le), y = avg_le, fill = europe_region)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Life Expectancy Across European Countries",
+       x = "Country",
+       y = "Average Life Expectancy") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+Communicable diseases per capita 
+```{r}
+ggplot(europe_data, aes(x = avg_cd_per_capita, y = avg_le, color = europe_region)) +
+  geom_point(size = 3) +
+  labs(subtitle = "Average Life Expectancy vs. Communicable Diseases per Capita",
+       title = "Scatter Plot") +
+  scale_color_manual(name = "Region",
+                     values = c("Northern Europe" = "blue", "Central and Eastern Europe" = "red", "Southern Europe" = "green", "Western Europe" = "purple", "Other" = "#BDBDBD")) +
+  theme_minimal()
+```
+
+Communicable diseases by country
+```{r}
+ggplot(europe_data, aes(x = reorder(Country, -avg_cd_per_capita), y = avg_cd_per_capita, fill = europe_region)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  labs(subtitle = "Communicable Diseases per Capita by Country",
+       title = "Bar Plot",
+       x = "Country",
+       y = "Communicable Diseases per Capita") +
+  scale_fill_manual(name = "Region",
+                     values = c("Northern Europe" = "blue", "Central and Eastern Europe" = "red", "Southern Europe" = "green", "Western Europe" = "purple", "Other" = "#BDBDBD")) +
+  theme_minimal() +
+  theme(legend.position = c(0.8, 0.8)) + 
+  coord_flip()
+```
+
+
+```{r}
+average_le <- europe_data %>%
+  group_by(Country, europe_region) %>%
+  summarize(avg_le = mean(le, na.rm = TRUE))
+
+
+ggplot(average_le, aes(x = reorder(Country, -avg_le), y = avg_le, fill = europe_region)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  labs(subtitle = "Average Life Expectancy by Country",
+       title = "Bar Plot") +
+  scale_fill_manual(name = "Region",
+                    values = c("Northern Europe" = "blue", "Central and Eastern Europe" = "red", "Southern Europe" = "green", "Western Europe" = "purple", "Other" = "#BDBDBD")) +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  coord_flip() +
+  xlab("Country") +
+  ylab("Average Life Expectancy")
+
+```
+
+
+
+Education Expenditure 
+```{r}
+ggplot(europe_data, aes(x = avg_hexp, y = le, color = europe_region)) +
+  geom_point(size = 2) +  # Adjust the size of the points
+  geom_smooth(method = "lm", se = FALSE, color = "black") +  # Add a linear trend line
+  labs(subtitle = "Life Expectancy vs. Health Expenditure per Capita",
+       title = "Scatter Plot with Trend Line") +
+  scale_color_manual(name = "Region",
+                     values = c("Northern Europe" = "#00ba38", "Central and Eastern Europe" = "red", "Southern Europe" = "skyblue", "Western Europe" = "purple", "Other" = "#BDBDBD")) +
+  theme_minimal() +
+  xlab("Health Expenditure per Capita") +  
+  ylab("Life Expectancy")
+```
+
+
+```{r}
+ggplot(europe_data, aes(x = reorder(Country, avg_hexp), y = avg_hexp, fill = europe_region)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  labs(subtitle = "Health Expenditure per Capita by Country",
+       title = "Bar Plot",
+       x = "Country",
+       y = "Health Expenditure per Capita") +
+  scale_fill_manual(name = "Region",
+                     values = c("Northern Europe" = "#00ba38", "Central and Eastern Europe" = "red", "Southern Europe" = "skyblue", "Western Europe" = "purple", "Other" = "#BDBDBD")) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        legend.justification = "right") +
+  coord_flip()
+```
+
+
+
+
+
