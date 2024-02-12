@@ -1,0 +1,735 @@
+---
+title: "LE_GLobal_final version"
+author: "Kyle, Salman, Sana, Erick and Maria"
+date: "2023-10-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Initial Setup and creating some new columns 
+```{r}
+
+# Load the libraries into R studio  
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(ggpubr)
+
+# Load the data into R from the output csv file 
+# Edit path here
+data <- read.csv("/Users/salmanhaider_2020/Desktop/Info Viz Report 3/240_Output(2).csv")
+
+# Create GDP per capita column and columns for a few other variables in the data 
+data <- data %>%
+  mutate(
+    GDPperCapita = (((GDP..Billions.)*1000000000)/Population..historical.estimates.),
+    CO2EmissionsperCapita = CO2.Emissions/Population..historical.estimates.,
+InjuriesperCapita = Injuries/Population..historical.estimates.,
+  CommunicableperCapita = Communicable.Diseases/Population..historical.estimates.,
+  NonCommunicableperCapita = Non.Communicable.Diseases/Population..historical.estimates.)
+
+# Define the desired order of levels for the Income.Group factor
+income_levels <- c("High income", "Upper middle income", "Lower middle income", "Low income")
+
+# Reorder the levels of the Income.Group factor
+data$Income.Group <- factor(data$Income.Group, levels = income_levels)
+
+# Load the names of the columns
+names(data)
+
+# Preview the first few rows to ensure it's loaded correctly
+head(data)
+
+# Check for missing values in each column
+missing_values <- colSums(is.na(data))
+
+# Print the count of missing values per column
+print(missing_values)
+
+# Print each column name on a new line
+
+column_names <- names(data)
+for(name in column_names) {
+  cat(name, "\n")
+}
+
+
+```
+
+Boxplots
+```{r}
+
+# Load the libraries into R studio  
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(ggpubr)
+
+# Load the data into R from the output csv file 
+# Edit path here
+data <- read.csv("/Users/salmanhaider_2020/Desktop/Info Viz Report 3/240_Output(2).csv")
+
+# Calculate the number of null values for each column
+null_count <- sapply(data, function(x) sum(is.na(x)))
+
+# Display the results
+print(null_count)
+
+# Create additional columns
+data <- data %>%
+  mutate(
+    GDPperCapita = (((GDP..Billions.)*1000000000)/Population..historical.estimates.),
+    CO2EmissionsperCapita = CO2.Emissions/Population..historical.estimates.,
+    InjuriesperCapita = Injuries/Population..historical.estimates.,
+    CommunicableperCapita = Communicable.Diseases/Population..historical.estimates.,
+    NonCommunicableperCapita = Non.Communicable.Diseases/Population..historical.estimates.)
+
+
+################################################
+#### LIFE EXPECTANCY
+# Define your dataset and column name
+#data <- my_data
+column_name <- "Life.Expectancy"
+
+# Specify the columns you want to keep
+columns_to_keep <- c("Country", "Region", "Income.Group", "Life.Expectancy")
+
+# Subset dataset to keep selected columns
+subset_data <- data[, columns_to_keep]
+
+# Calculate the IQR for the specified column
+Q1 <- quantile(data[[column_name]], 0.25)
+Q3 <- quantile(data[[column_name]], 0.75)
+IQR_value <- Q3 - Q1
+
+# Set a threshold to determine outliers (you can adjust this threshold)
+threshold <- 1.5
+
+# Identify outliers
+outliers <- subset_data %>%
+  filter(subset_data[[column_name]] < Q1 - threshold * IQR_value | subset_data[[column_name]] > Q3 + threshold * IQR_value)
+
+# Exclude outliers from the dataset
+filtered_data <- subset_data %>%
+  filter(!(subset_data[[column_name]] %in% outliers[[column_name]]))
+
+# BOXPLOTS FOR LIFE EXPECTANCY
+# create boxplot with Outliers
+ggplot(data, aes(Life.Expectancy, Income.Group, fill = Income.Group)) +
+  geom_boxplot(notch=TRUE, show.legend = FALSE) +
+  ggtitle("Life Expectancy by Income Group") +
+  ylab("Income Group") +
+  xlab("Life Expectancy")
+
+# create boxplot without Outliers
+ggplot(filtered_data, aes(Life.Expectancy, Income.Group, fill = Income.Group)) +
+  geom_boxplot(notch=TRUE, show.legend = FALSE, outlier.shape = NA) +
+  ggtitle("Life Expectancy by Income Group") +
+  ylab("Income Group") +
+  xlab("Life Expectancy")
+
+# Summary of unfiltered and filtered data
+summary(data)
+summary(filtered_data)
+
+#########################
+
+#### ACCESS TO CLEAN WATER
+# Define your dataset and column name
+#data <- my_data
+column_name <- "Access.to.clean.water"
+
+# Specify the columns you want to keep
+columns_to_keep <- c("Country", "Region", "Income.Group", "Access.to.clean.water")
+
+# Subset dataset to keep selected columns
+subset_data <- data[, columns_to_keep]
+
+# Calculate the IQR for the specified column
+Q1 <- quantile(data[[column_name]], 0.25, na.rm = TRUE)
+Q3 <- quantile(data[[column_name]], 0.75, na.rm = TRUE)
+IQR_value <- Q3 - Q1
+
+# Set a threshold to determine outliers (you can adjust this threshold)
+threshold <- 1.5
+
+# Identify outliers
+outliers <- subset_data %>%
+  filter(subset_data[[column_name]] < Q1 - threshold * IQR_value | subset_data[[column_name]] > Q3 + threshold * IQR_value)
+
+# Exclude outliers from the dataset
+filtered_data <- subset_data %>%
+  filter(!(subset_data[[column_name]] %in% outliers[[column_name]]))
+
+# BOXPLOTS FOR LIFE EXPECTANCY
+# create boxplot with Outliers
+ggplot(data, aes(Access.to.clean.water, Income.Group, fill = Income.Group)) +
+  geom_boxplot(notch=TRUE, show.legend = FALSE) +
+  ggtitle("Access to Clean Water % by Income Group") +
+  ylab("Income Group") +
+  xlab("Access to Clean Water %")
+
+# create boxplot without Outliers
+ggplot(filtered_data, aes(Access.to.clean.water, Income.Group, fill = Income.Group)) +
+  geom_boxplot(notch=TRUE, show.legend = FALSE, outlier.shape = NA) +
+  ggtitle("Access to Clean Water % by Income Group") +
+  ylab("Income Group") +
+  xlab("Access to Clean Water %")
+
+# Summary of unfiltered and filtered data
+summary(data)
+summary(filtered_data)
+
+
+
+```
+
+Cluster Analysis (1)
+```{r}
+# Create dataframe with averages by country
+avg_data_by_country <- data %>%
+  group_by(Country) %>%
+  summarise_all(.funs = list(mean), na.rm = TRUE)
+
+avg_data_by_country <- avg_data_by_country %>%
+  select(-Year)
+
+unique_pairs <- data %>%
+  distinct(Country, Region, Income.Group)
+
+avg_data_by_country <- avg_data_by_country %>%
+  left_join(unique_pairs, by = "Country")
+
+avg_data_by_country <- avg_data_by_country %>%
+  select(-Region.x, -Income.Group.x) %>%
+  rename(
+    Region = Region.y,
+    Income.Group = Income.Group.y
+  )
+
+# Define the desired order of levels for the Income.Group factor
+income_levels <- c("High income", "Upper middle income", "Lower middle income", "Low income")
+
+# Reorder the levels of the Income.Group factor
+avg_data_by_country$Income.Group <- factor(avg_data_by_country$Income.Group, levels = income_levels)
+```
+Cluster Analysis (2)
+```{r}
+library(stats)
+
+# Life Expectancy and Health Expenditure %
+# Visualizing LE and Health
+ggplot(avg_data_by_country, aes(x = `Health.Expenditure..`, y = `Life.Expectancy`, color = `Income.Group`)) +
+  geom_point() +
+  ggtitle("Avg Life Expectancy vs Avg Health Expenditure") +
+  xlab("Health Expenditure % of GDP") + ylab("Life Expectancy")
+
+# Normalization
+avg_data_by_country_scaled <- data.frame(avg_data_by_country)
+
+avg_data_by_country_scaled[, c("Life.Expectancy_scaled", "Health.Expenditure_scaled")] =  scale(avg_data_by_country[, c("Life.Expectancy", "Health.Expenditure..")])
+
+# Fitting and evaluating the model
+# Get two columns of interest
+LE_health <- avg_data_by_country_scaled[, c("Country", "Life.Expectancy", "Health.Expenditure..", "Life.Expectancy_scaled", "Health.Expenditure_scaled", "Region", "Income.Group")]
+
+LE_health <- na.omit(LE_health)
+
+# how many clusters
+n_clusters <- 10
+# initialize within sum of squares error
+wss <- numeric(n_clusters)
+
+# Set seed
+set.seed(123)
+
+for (i in 1:n_clusters) {
+  # fit model
+  km_LE_health.out <- kmeans(LE_health[, c("Life.Expectancy_scaled", "Health.Expenditure_scaled")], centers = i)
+  # save wss
+  wss[i] <- km_LE_health.out$tot.withinss
+}
+
+# create scree plot
+wss_df <- tibble(clusters = 1:n_clusters, wss = wss)
+
+scree_plot <- ggplot(wss_df, aes(x = clusters, y = wss, group = 1)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = c(2, 4, 6, 8, 10)) +
+  xlab('Number of clusters') +
+  ylab('wss')
+
+scree_plot
+
+km_LE_health.out <- kmeans(LE_health[, c("Life.Expectancy_scaled", "Health.Expenditure_scaled")], centers = 4)
+km_LE_health.out
+
+# Plot results
+LE_health$cluster_id <- factor(km_LE_health.out$cluster)
+ggplot(LE_health, aes(`Health.Expenditure..`, `Life.Expectancy`, color = cluster_id, label = `Country`, shape = `Income.Group`)) +
+    geom_point(alpha = 0.5) +
+    #geom_text(size = 3) +
+    xlab("Health Expenditure %") +
+    ylab("Life Expectancy")
+
+LE_health$cluster_id <- factor(km_LE_health.out$cluster)
+ggplot(LE_health, aes(`Health.Expenditure..`, `Life.Expectancy`, color = cluster_id, label = `Country`)) +
+    geom_point(alpha = 0.5) +
+    geom_text(size = 3) +
+  ggtitle("Cluster Analysis of Life Expectancy and Health Expenditures") +
+    xlab("Health Expenditure %") +
+    ylab("Life Expectancy")
+
+```
+Cluster Analysis (3)
+```{r}
+
+# Life Expectancy and Undernourishment
+# Visualizing LE and Health
+ggplot(avg_data_by_country, aes(x = `Prevalence.of.Undernourishment`, y = `Life.Expectancy`, color = `Income.Group`)) +
+  geom_point() +
+  ggtitle("Avg Life Expectancy vs Avg Undernourishment") +
+  xlab("Avg Prevalence of Undernourishment") + ylab("Life Expectancy")
+
+# Normalization
+avg_data_by_country_scaled2 <- data.frame(avg_data_by_country)
+
+avg_data_by_country_scaled2[, c("Life.Expectancy_scaled", "Prevalence.of.Undernourishment_scaled")] =  scale(avg_data_by_country[, c("Life.Expectancy", "Prevalence.of.Undernourishment")])
+
+# Fitting and evaluating the model
+# Get two columns of interest
+LE_undernourishment <- avg_data_by_country_scaled2[, c("Country", "Life.Expectancy", "Prevalence.of.Undernourishment", "Life.Expectancy_scaled", "Prevalence.of.Undernourishment_scaled", "Region", "Income.Group")]
+
+LE_undernourishment <- na.omit(LE_undernourishment)
+
+# how many clusters
+n_clusters <- 10
+
+# initialize within sum of squares error
+wss <- numeric(n_clusters)
+
+# Set seed
+set.seed(123)
+
+for (i in 1:n_clusters) {
+  # fit model
+  km_LE_undernourishment.out <- kmeans(LE_undernourishment[, c("Life.Expectancy_scaled", "Prevalence.of.Undernourishment_scaled")], centers = i)
+  
+  # save wss
+  wss[i] <- km_LE_undernourishment.out$tot.withinss
+}
+
+# create scree plot
+wss_df <- tibble(clusters = 1:n_clusters, wss = wss)
+
+scree_plot <- ggplot(wss_df, aes(x = clusters, y = wss, group = 1)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = c(2, 4, 6, 8, 10)) +
+  xlab('Number of clusters') +
+  ylab('wss')
+
+scree_plot
+
+km_LE_undernourishment.out <- kmeans(LE_undernourishment[, c("Life.Expectancy_scaled", "Prevalence.of.Undernourishment_scaled")], centers = 4)
+km_LE_undernourishment.out
+
+# Plot results
+LE_undernourishment$cluster_id <- factor(km_LE_undernourishment.out$cluster)
+ggplot(LE_undernourishment, aes(`Prevalence.of.Undernourishment`, `Life.Expectancy`, color = cluster_id, label = `Country`, shape = `Income.Group`)) +
+    geom_point(alpha = 0.8) +
+    #geom_text(size = 3) +
+  ggtitle("Cluster Analysis of Life Expectancy and Prevalence of Undernourishment") +
+    xlab("Prevalence of Undernourishment") +
+    ylab("Life Expectancy") +
+    scale_y_log10() + scale_x_log10()
+
+```
+Cluster Analysis (4)
+```{r}
+
+# Life Expectancy and GDP per capita
+# Visualizing LE and GDP
+ggplot(avg_data_by_country, aes(x = `GDPperCapita`, y = `Life.Expectancy`, color = `Income.Group`)) +
+  geom_point() +
+  ggtitle("Avg Life Expectancy vs Avg GDP per Capita") +
+  xlab("Avg GDP per Capita") + ylab("Life Expectancy")
+
+# Normalization
+avg_data_by_country_scaled3 <- data.frame(avg_data_by_country)
+
+avg_data_by_country_scaled3[, c("Life.Expectancy_scaled", "GDPperCapita_scaled")] =  scale(avg_data_by_country[, c("Life.Expectancy", "GDPperCapita")])
+
+# Fitting and evaluating the model
+# Get two columns of interest
+LE_GDP <- avg_data_by_country_scaled3[, c("Country", "Life.Expectancy", "GDPperCapita", "Life.Expectancy_scaled", "GDPperCapita_scaled", "Region", "Income.Group")]
+
+LE_GDP <- na.omit(LE_GDP)
+
+# how many clusters
+n_clusters <- 10
+
+# initialize within sum of squares error
+wss <- numeric(n_clusters)
+
+# Set seed
+set.seed(123)
+
+for (i in 1:n_clusters) {
+  # fit model
+  km_LE_GDP.out <- kmeans(LE_GDP[, c("Life.Expectancy_scaled", "GDPperCapita_scaled")], centers = i)
+  
+  # save wss
+  wss[i] <- km_LE_GDP.out$tot.withinss
+}
+
+# create scree plot
+wss_df <- tibble(clusters = 1:n_clusters, wss = wss)
+
+scree_plot <- ggplot(wss_df, aes(x = clusters, y = wss, group = 1)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = c(2, 4, 6, 8, 10)) +
+  ggtitle("Line plot of WSS vs Number of Clusters") +
+  xlab('Number of clusters') +
+  ylab('wss')
+
+scree_plot
+
+km_LE_GDP.out <- kmeans(LE_GDP[, c("Life.Expectancy_scaled", "GDPperCapita_scaled")], centers = 3)
+km_LE_GDP.out
+
+# Plot results
+LE_GDP$cluster_id <- factor(km_LE_GDP.out$cluster)
+ggplot(LE_GDP, aes(`GDPperCapita`, `Life.Expectancy`, color = cluster_id, label = `Country`, shape = `Income.Group`)) +
+    geom_point(alpha = 0.5) +
+    #geom_text(size = 3) +
+  ggtitle("Cluster Analysis of Life Expectancy and GDP per Capita") +
+    xlab("GDP per Capita (log10)") +
+    ylab("Life Expectancy") +
+    scale_x_log10()
+
+```
+Cluster Analysis (5)
+```{r}
+# Life Expectancy and Unemployment
+# Visualizing LE and Unemployment
+ggplot(avg_data_by_country, aes(x = `Unemployment`, y = `Life.Expectancy`, color = `Income.Group`)) +
+  geom_point() +
+  ggtitle("Avg Life Expectancy vs Avg Unemployment") +
+  xlab("Avg Unemployment") + ylab("Life Expectancy")
+
+# Normalization
+avg_data_by_country_scaled4 <- data.frame(avg_data_by_country)
+
+avg_data_by_country_scaled4[, c("Life.Expectancy_scaled", "Unemployment_scaled")] =  scale(avg_data_by_country[, c("Life.Expectancy", "Unemployment")])
+
+# Fitting and evaluating the model
+# Get two columns of interest
+LE_ump <- avg_data_by_country_scaled4[, c("Country", "Life.Expectancy", "Unemployment", "Life.Expectancy_scaled", "Unemployment_scaled", "Region", "Income.Group")]
+
+LE_ump <- na.omit(LE_ump)
+
+# how many clusters
+n_clusters <- 10
+
+# initialize within sum of squares error
+wss <- numeric(n_clusters)
+
+# Set seed
+set.seed(123)
+
+for (i in 1:n_clusters) {
+  # fit model
+  km_LE_ump.out <- kmeans(LE_ump[, c("Life.Expectancy_scaled", "Unemployment_scaled")], centers = i)
+  
+  # save wss
+  wss[i] <- km_LE_ump.out$tot.withinss
+}
+
+# create scree plot
+wss_df <- tibble(clusters = 1:n_clusters, wss = wss)
+
+scree_plot <- ggplot(wss_df, aes(x = clusters, y = wss, group = 1)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = c(2, 4, 6, 8, 10)) +
+  xlab('Number of clusters') +
+  ylab('wss')
+
+scree_plot
+
+km_LE_ump.out <- kmeans(LE_ump[, c("Life.Expectancy_scaled", "Unemployment_scaled")], centers = 4)
+km_LE_ump.out
+
+# Plot results
+LE_ump$cluster_id <- factor(km_LE_ump.out$cluster)
+ggplot(LE_ump, aes(`Unemployment`, `Life.Expectancy`, color = cluster_id, label = `Country`, shape = `Income.Group`)) +
+    geom_point(alpha = 0.5) +
+    ggtitle("Cluster Analysis of Life Expectancy and Unemployment") +
+    #geom_text(size = 3) +
+    xlab("Unemployment") +
+    ylab("Life Expectancy")
+```
+Cluster Analysis (6)
+```{r}
+# Life Expectancy and CO2
+# Visualizing LE and CO2
+ggplot(avg_data_by_country, aes(x = `CO2EmissionsperCapita`, y = `Life.Expectancy`, color = `Income.Group`)) +
+  geom_point() +
+  ggtitle("Avg Life Expectancy vs Avg CO2 Emissions per Capita") +
+  xlab("CO2 Emissions") + ylab("Life Expectancy")
+
+# Normalization
+avg_data_by_country_scaled5 <- data.frame(avg_data_by_country)
+
+avg_data_by_country_scaled5[, c("Life.Expectancy_scaled", "CO2EmissionsperCapita_scaled")] =  scale(avg_data_by_country[, c("Life.Expectancy", "CO2EmissionsperCapita")])
+
+# Fitting and evaluating the model
+# Get two columns of interest
+LE_co2 <- avg_data_by_country_scaled5[, c("Country", "Life.Expectancy", "CO2EmissionsperCapita", "Life.Expectancy_scaled", "CO2EmissionsperCapita_scaled", "Region", "Income.Group")]
+
+LE_co2 <- na.omit(LE_co2)
+
+# how many clusters
+n_clusters <- 10
+
+# initialize within sum of squares error
+wss <- numeric(n_clusters)
+
+# Set seed
+set.seed(123)
+
+for (i in 1:n_clusters) {
+  # fit model
+  km_LE_co2.out <- kmeans(LE_co2[, c("Life.Expectancy_scaled", "CO2EmissionsperCapita_scaled")], centers = i)
+  
+  # save wss
+  wss[i] <- km_LE_co2.out$tot.withinss
+}
+
+# create scree plot
+wss_df <- tibble(clusters = 1:n_clusters, wss = wss)
+
+scree_plot <- ggplot(wss_df, aes(x = clusters, y = wss, group = 1)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = c(2, 4, 6, 8, 10)) +
+  xlab('Number of clusters') +
+  ylab('wss')
+
+scree_plot
+
+km_LE_co2.out <- kmeans(LE_co2[, c("Life.Expectancy_scaled", "CO2EmissionsperCapita_scaled")], centers = 4)
+km_LE_co2.out
+
+# Plot results
+LE_co2$cluster_id <- factor(km_LE_co2.out$cluster)
+ggplot(LE_co2, aes(`CO2EmissionsperCapita`, `Life.Expectancy`, color = cluster_id, label = `Country`, shape = `Income.Group`)) +
+    geom_point(alpha = 0.5) +
+    #geom_text(size = 3) +
+    ggtitle("Cluster Analysis of Life Expectancy and CO2 Emissions per Capita") +
+    xlab("CO2 Emissions per Capita") +
+    ylab("Life Expectancy") +
+  scale_x_log10()
+
+```
+
+Regression for all variables individually (Outliers)
+```{r}
+# Running linear regression of life expectancy against every variable in the dataset. 
+
+# These were run just to get an idea of the individual effects of each of these variables. In the real world, LE is affected by a combination of variables. We will be doing multiple linear regression after this. 
+
+# List of predictor variables in our data set. Grouping them like this in a list makes it easier to work with the variables.  
+
+predictor_vars <- c("Prevalence.of.Undernourishment", "CO2.Emissions", "Health.Expenditure..", 
+                    "Education.Expenditure..", "Unemployment", "Injuries", "Communicable.Diseases", 
+                    "Non.Communicable.Diseases", "Access.to.clean.water", 
+                    "GDPperCapita")
+
+
+# Here we loop over each predictor variable to run a linear regression against Life Expectancy. Doing each regression individually would take up a lot of space so the loop does it efficiently. This way we will get a summary of each variable against Life Expectancy. 
+
+for(var in predictor_vars) {
+  formula_str <- paste("Life.Expectancy ~", var)
+  model <- lm(formula_str, data = data)
+  cat("------------------------------------------------\n")
+  cat("Linear Regression Model for:", var, "\n")
+  cat("------------------------------------------------\n")
+  print(summary(model))
+}
+
+
+```
+
+Regression Plot for Life Expectancy and GDP Per Capita (With Outliers)
+```{r}
+
+# Regression of LE and GDP Per Capita (Outliers)
+
+# Run the regression model with outliers
+gdp_and_le_with_outliers <- lm(Life.Expectancy ~ (GDPperCapita), data = data)
+
+# Summary of the model to get coefficients, R-squared, and p-values
+summary(gdp_and_le_with_outliers)
+
+# Plot the data and the regression line
+ggplot(data, aes(x = GDPperCapita, y = Life.Expectancy)) +
+  geom_point() +  
+  geom_smooth(method = "lm") +  
+  ggtitle("Regression of Life Expectancy on GDP per capita with Outliers") +
+  xlab("GDP (Billions)") +
+  ylab("Life Expectancy")
+
+```
+
+Regression Plot fo Life Expectancy and Prevalence of Undernourishment (With Outliers)
+```{r}
+
+# Regression of LE and Prevalence of Undernourishment (Outliers)
+
+# Run the regression model with outliers
+undernourishment_and_le_with_outliers <- lm(Life.Expectancy ~ Prevalence.of.Undernourishment, data = data)
+
+# Summary of the model to get coefficients, R-squared, and p-values
+summary(undernourishment_and_le_with_outliers)
+
+# Plot the data and the regression line
+ggplot(data, aes(x = Prevalence.of.Undernourishment, y = Life.Expectancy)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("Regression of Life Expectancy on Prevalence of Undernourishment with Outliers") +
+  xlab("Prevalence of Undernourishment (%)") +
+  ylab("Life Expectancy")
+
+
+```
+
+Regression for all variables individually (without Outliers)
+```{r}
+
+# List of our predictor variables that we want to run regressions for 
+predictor_vars <- c("Prevalence.of.Undernourishment", "CO2.Emissions", "Health.Expenditure..", 
+                    "Education.Expenditure..", "Unemployment", "Injuries", "Communicable.Diseases", 
+                    "Non.Communicable.Diseases", "Access.to.clean.water", 
+                    "GDPperCapita")
+
+# Select just the columns you are interested in
+data_subset <- data[, c("Life.Expectancy", predictor_vars)]
+
+# Calculate Z-scores for the selected numeric columns
+data_z <- as.data.frame(scale(data_subset[, predictor_vars]))
+
+# Identify rows where any column's Z-score is greater than 3 or less than -3
+outlier_rows <- apply(data_z, 1, function(row) any(abs(row) > 3))
+
+#print(outlier_rows)
+
+# Remove outliers from the subset
+data_no_outliers <- data_subset[!outlier_rows, ]
+
+#print(data_no_outliers)
+
+# Loop over each predictor variable to run a linear regression against Life.Expectancy
+for(var in predictor_vars) {
+  formula_str <- paste("Life.Expectancy ~", var)
+  model <- lm(formula_str, data = data_no_outliers)
+  cat("------------------------------------------------\n")
+  cat("Linear Regression Model for:", var, "\n")
+  cat("------------------------------------------------\n")
+  print(summary(model))
+}
+
+
+```
+
+Regression Plot for Life Expectancy and Access to Clean Water (Without Outliers)
+```{r}
+
+# Run the regression model without outliers for Access to Clean Water
+access_water_and_le_no_outliers <- lm(Life.Expectancy ~ Access.to.clean.water, data = data_no_outliers)
+
+# Summary of the model to get coefficients, R-squared, and p-values
+summary(access_water_and_le_no_outliers)
+
+# Plot the data and the regression line
+ggplot(data_no_outliers, aes(x = Access.to.clean.water, y = Life.Expectancy)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("Regression of Life Expectancy on Access to Clean Water (Without Outliers)") +
+  xlab("Access to Clean Water (%)") +
+  ylab("Life Expectancy")
+
+
+```
+
+Regression Plot for Life Expectancy and Health Expenditure % (Without Outliers)
+```{r}
+
+# Run the regression model without outliers for Health Expenditure
+health_exp_and_le_no_outliers <- lm(Life.Expectancy ~ Health.Expenditure.., data = data_no_outliers)
+
+# Summary of the model to get coefficients, R-squared, and p-values
+summary(health_exp_and_le_no_outliers)
+
+# Plot the data and the regression line
+ggplot(data_no_outliers, aes(x = Health.Expenditure.., y = Life.Expectancy)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("Regression of Life Expectancy on Health Expenditure (Without Outliers)") +
+  xlab("Health Expenditure (%)") +
+  ylab("Life Expectancy")
+
+```
+
+Multivariate Regression (Outliers)
+```{r}
+
+# Loading the car libarary to be able to use the vif() function 
+library(car)
+
+# Run multivariate regression with outliers 
+multivar_model_with_outliers <- lm(Life.Expectancy ~ Prevalence.of.Undernourishment + CO2.Emissions + Health.Expenditure.. + Education.Expenditure.. + Unemployment + Injuries + Communicable.Diseases + Non.Communicable.Diseases + Access.to.clean.water + GDPperCapita, data = data)
+
+# Summary of the model without outliers
+summary(multivar_model_with_outliers)
+
+```
+
+Multivariate Regression (without Outliers)
+```{r}
+
+library(car)
+
+multivar_model_without_outliers <- lm(Life.Expectancy ~ Prevalence.of.Undernourishment + CO2.Emissions + Health.Expenditure.. + Education.Expenditure.. + Unemployment + Injuries + Communicable.Diseases + Non.Communicable.Diseases + Access.to.clean.water + GDPperCapita, data = data_no_outliers)
+
+# Summary of the model without outliers
+summary(multivar_model_without_outliers)
+
+# Run vif function to check collinearity 
+vif(multivar_model_with_outliers)
+
+```
+
+Multivariate Regression (without Outliers) - Non-Communicable and Injuries Variables removed 
+```{r}
+
+library(car)
+
+multivar_model_without_outliers <- lm(Life.Expectancy ~ Prevalence.of.Undernourishment + CO2.Emissions + Health.Expenditure.. + Education.Expenditure.. + Unemployment + Communicable.Diseases + Access.to.clean.water + GDPperCapita, data = data_no_outliers)
+
+# Summary of the model without outliers
+summary(multivar_model_without_outliers)
+
+# Run vif function 
+vif(multivar_model_without_outliers)
+
+```
+
